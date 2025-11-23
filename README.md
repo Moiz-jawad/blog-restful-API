@@ -82,7 +82,7 @@ After seeding, you can use these credentials to test:
 - **Admin**: `admin@blog.com` / `Admin@12345`
 - **User**: `john.doe@example.com` / `User@12345`
 - **User**: `sarah.johnson@example.com` / `Sarah@123`
-- **User**: `michael.chen@example.com` / `Michael@123`
+- **User**: `moiz@example.com` / `moiz123`
 
 ## API Endpoints
 
