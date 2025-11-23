@@ -1,0 +1,41 @@
+{
+  "name": "blog-restful-api",
+  "version": "1.0.0",
+  "description": "Production-ready RESTful API for a blog platform (users, posts, categories, files)",
+  "main": "index.js",
+  "scripts": {
+    "start": "NODE_ENV=production node index.js",
+    "dev": "NODE_ENV=development nodemon index.js",
+    "seed": "NODE_ENV=development node init/seed.js"
+  },
+  "keywords": [
+    "blog",
+    "rest",
+    "api",
+    "express",
+    "mongoose"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.684.0",
+    "@aws-sdk/s3-request-presigner": "^3.684.0",
+    "bcryptjs": "^2.4.3",
+    "body-parser": "^1.20.3",
+    "compression": "^1.7.5",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.4.0",
+    "express-validator": "^7.2.0",
+    "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.8.0",
+    "morgan": "^1.10.0",
+    "multer": "^1.4.5-lts.2",
+    "nodemailer": "^6.9.16"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.7"
+  }
+}
