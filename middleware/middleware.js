@@ -1,4 +1,4 @@
-const errorHanlder = (error, req, res, next) => {
+const errorHandler = (error, req, res, next) => {
   const statusCode =
     (res.statusCode && res.statusCode !== 200 ? res.statusCode : null) ||
     error.statusCode ||
@@ -12,4 +12,4 @@ const errorHanlder = (error, req, res, next) => {
   });
 };
 
-module.exports = errorHanlder;
+module.exports = errorHandler;

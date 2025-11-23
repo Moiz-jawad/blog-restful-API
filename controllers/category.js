@@ -1,4 +1,5 @@
 const { Category, User } = require("../models");
+const mongoose = require("mongoose");
 
 const addCategory = async (req, res, next) => {
   try {
@@ -58,6 +59,15 @@ const updateCategory = async (req, res, next) => {
     const { _id } = req.user;
     const { title, desc } = req.body;
 
+    // Validate ObjectId format
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        code: 400,
+        status: false,
+        message: "Invalid category ID format",
+      });
+    }
+
     const category = await Category.findById(id);
 
     if (!category) {
@@ -103,6 +113,15 @@ const deleteCategory = async (req, res, next) => {
   try {
     const { id } = req.params;
 
+    // Validate ObjectId format
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        code: 400,
+        status: false,
+        message: "Invalid category ID format",
+      });
+    }
+
     const category = await Category.findById(id);
 
     if (!category) {
@@ -132,7 +151,9 @@ const getCategories = async (req, res, next) => {
 
     let query = {};
     if (q && typeof q === "string" && q.trim()) {
-      const search = new RegExp(q, "i");
+      // Sanitize search query to prevent NoSQL injection
+      const sanitizedQuery = q.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const search = new RegExp(sanitizedQuery, "i");
       query = { $or: [{ title: search }, { desc: search }] };
     }
 
@@ -168,6 +189,15 @@ const getCategories = async (req, res, next) => {
 const getCategory = async (req, res, next) => {
   try {
     const { id } = req.params;
+
+    // Validate ObjectId format
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        code: 400,
+        status: false,
+        message: "Invalid category ID format",
+      });
+    }
 
     const category = await Category.findById(id);
     if (!category) {

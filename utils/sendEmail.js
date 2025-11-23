@@ -40,9 +40,7 @@ const sendEmail = async (emailTo, subject, code, content) => {
     await transporter.verify();
 
     await transporter.sendMail(message);
-    console.log(`Email sent successfully to ${emailTo}`);
   } catch (error) {
-    console.error("Email sending failed:", error.message);
     throw new Error("Failed to send email");
   }
 };

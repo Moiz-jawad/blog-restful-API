@@ -3,10 +3,23 @@ const { conUrl } = require("../config/keys");
 
 const contMongoose = async () => {
   try {
-    await mongoose.connect(conUrl);
+    await mongoose.connect(conUrl, {
+      serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
+      socketTimeoutMS: 45000, // Close sockets after 45s of inactivity
+    });
     console.log("Database connection successful!");
+
+    // Handle connection events
+    mongoose.connection.on("error", (err) => {
+      console.error("MongoDB connection error:", err);
+    });
+
+    mongoose.connection.on("disconnected", () => {
+      console.warn("MongoDB disconnected");
+    });
   } catch (error) {
-    console.log(error.message);
+    console.error("Database connection error:", error.message);
+    process.exit(1);
   }
 };
 

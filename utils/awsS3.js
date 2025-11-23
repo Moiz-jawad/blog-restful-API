@@ -40,7 +40,6 @@ const uploadFileToS3 = async ({ file, ext }) => {
     await client.send(command);
     return key;
   } catch (error) {
-    console.error("S3 upload error:", error);
     throw error;
   }
 };
@@ -57,7 +56,7 @@ const signedUrl = async (Key) => {
     const url = await getSignedUrl(client, command, { expiresIn: 60 });
     return url;
   } catch (error) {
-    console.log(error);
+    throw error;
   }
 };
 
@@ -72,7 +71,7 @@ const deleteFileFromS3 = async (Key) => {
     await client.send(command);
     return;
   } catch (error) {
-    console.log(error);
+    throw error;
   }
 };
 module.exports = { uploadFileToS3, signedUrl, deleteFileFromS3 };

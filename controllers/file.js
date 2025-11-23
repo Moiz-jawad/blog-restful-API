@@ -1,4 +1,5 @@
 const path = require("path");
+const mongoose = require("mongoose");
 const { validateExtension } = require("../validator/file");
 const {
   uploadFileToS3,
@@ -56,15 +57,25 @@ const getSignedUrl = async (req, res, next) => {
   try {
     const { key } = req.query;
 
-    if (!key) {
+    if (!key || typeof key !== "string" || !key.trim()) {
       return res.status(400).json({
         code: 400,
         status: false,
-        message: "Missing required query parameter: key",
+        message: "Missing or invalid query parameter: key",
       });
     }
 
-    const url = await signedUrl(key);
+    // Sanitize key to prevent path traversal
+    const sanitizedKey = key.trim();
+    if (sanitizedKey.includes("..") || sanitizedKey.includes("/")) {
+      return res.status(400).json({
+        code: 400,
+        status: false,
+        message: "Invalid key format",
+      });
+    }
+
+    const url = await signedUrl(sanitizedKey);
 
     res.status(200).json({
       code: 200,
@@ -81,17 +92,27 @@ const deleteFile = async (req, res, next) => {
   try {
     const { key } = req.query;
 
-    if (!key) {
+    if (!key || typeof key !== "string" || !key.trim()) {
       return res.status(400).json({
         code: 400,
         status: false,
-        message: "Missing required query parameter: key",
+        message: "Missing or invalid query parameter: key",
       });
     }
 
-    await deleteFileFromS3(key);
+    // Sanitize key to prevent path traversal
+    const sanitizedKey = key.trim();
+    if (sanitizedKey.includes("..") || sanitizedKey.includes("/")) {
+      return res.status(400).json({
+        code: 400,
+        status: false,
+        message: "Invalid key format",
+      });
+    }
 
-    const file = await File.findOneAndDelete({ key });
+    await deleteFileFromS3(sanitizedKey);
+
+    const file = await File.findOneAndDelete({ key: sanitizedKey });
     if (!file) {
       return res.status(404).json({
         code: 404,

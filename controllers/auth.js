@@ -9,7 +9,10 @@ const signup = async (req, res, next) => {
   try {
     const { name, email, password, role } = req.body;
 
-    const isEmailExist = await User.findOne({ email });
+    // Normalize email
+    const normalizedEmail = email?.trim().toLowerCase();
+
+    const isEmailExist = await User.findOne({ email: normalizedEmail });
     if (isEmailExist) {
       return res.status(400).json({
         code: 400,
@@ -20,7 +23,12 @@ const signup = async (req, res, next) => {
 
     const hashPasswording = await hashPassword(password);
 
-    const user = new User({ name, email, password: hashPasswording, role });
+    const user = new User({
+      name,
+      email: normalizedEmail,
+      password: hashPasswording,
+      role,
+    });
 
     await user.save();
     return res.status(201).json({
@@ -38,7 +46,10 @@ const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
-    const user = await User.findOne({ email });
+    // Normalize email
+    const normalizedEmail = email?.trim().toLowerCase();
+
+    const user = await User.findOne({ email: normalizedEmail });
     if (!user) {
       return res.status(401).json({
         code: 401,
@@ -81,7 +92,9 @@ const verifyCode = async (req, res, next) => {
       });
     }
 
-    const user = await User.findOne({ email: email.trim().toLowerCase() });
+    // Normalize email
+    const normalizedEmail = email?.trim().toLowerCase();
+    const user = await User.findOne({ email: normalizedEmail });
 
     if (!user) {
       return res.status(404).json({
@@ -111,8 +124,10 @@ const verifyCode = async (req, res, next) => {
     }
 
     const code = generateCode(6);
+    const expiresAt = new Date(now.getTime() + 10 * 60 * 1000); // 10 minutes expiration
     user.verificationCode = code;
     user.codeSentAt = now;
+    user.codeExpiresAt = expiresAt;
     await user.save();
 
     await sendEmail(
@@ -128,7 +143,6 @@ const verifyCode = async (req, res, next) => {
       message: "Verification code sent successfully",
     });
   } catch (error) {
-    console.error("Error in verifyCode:", error);
     next(error);
   }
 };
@@ -136,7 +150,9 @@ const verifyCode = async (req, res, next) => {
 const verifyUser = async (req, res, next) => {
   try {
     const { email, code } = req.body;
-    const user = await User.findOne({ email });
+    // Normalize email
+    const normalizedEmail = email?.trim().toLowerCase();
+    const user = await User.findOne({ email: normalizedEmail });
 
     if (!user) {
       return res.status(404).json({
@@ -146,7 +162,19 @@ const verifyUser = async (req, res, next) => {
       });
     }
 
-    if (String(user.verificationCode).trim() !== String(code).trim()) {
+    // Check if code has expired
+    if (user.codeExpiresAt && new Date() > new Date(user.codeExpiresAt)) {
+      return res.status(400).json({
+        code: 400,
+        status: false,
+        message: "Verification code has expired",
+      });
+    }
+
+    if (
+      !user.verificationCode ||
+      String(user.verificationCode).trim() !== String(code).trim()
+    ) {
       return res.status(400).json({
         code: 400,
         status: false,
@@ -156,6 +184,7 @@ const verifyUser = async (req, res, next) => {
 
     user.isVerified = true;
     user.verificationCode = null;
+    user.codeExpiresAt = null;
     await user.save();
 
     return res.status(200).json({
@@ -171,17 +200,34 @@ const verifyUser = async (req, res, next) => {
 const forgotPasswordCode = async (req, res, next) => {
   try {
     const { email } = req.body;
-    const user = await User.findOne({ email });
+    // Normalize email
+    const normalizedEmail = email?.trim().toLowerCase();
+    const user = await User.findOne({ email: normalizedEmail });
     if (!user) {
-      return res.status(404).json({
-        code: 404,
+      // Don't reveal if user exists (security best practice)
+      return res.status(200).json({
+        code: 200,
+        status: true,
+        message: "If the email exists, a password reset code has been sent",
+      });
+    }
+
+    // Prevent spamming: allow new code only every 60 seconds
+    const now = new Date();
+    const lastSent = user.codeSentAt ? new Date(user.codeSentAt) : null;
+    if (lastSent && now - lastSent < 60 * 1000) {
+      return res.status(429).json({
+        code: 429,
         status: false,
-        message: "User not found",
+        message: "Please wait before requesting another password reset code",
       });
     }
 
     const code = generateCode(6);
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes expiration
     user.forgotPasswordCode = code;
+    user.forgotPasswordCodeExpiresAt = expiresAt;
+    user.codeSentAt = now;
     await user.save();
 
     await sendEmail(
@@ -204,7 +250,9 @@ const forgotPasswordCode = async (req, res, next) => {
 const recoverPassword = async (req, res, next) => {
   try {
     const { email, code, password } = req.body;
-    const user = await User.findOne({ email });
+    // Normalize email
+    const normalizedEmail = email?.trim().toLowerCase();
+    const user = await User.findOne({ email: normalizedEmail });
 
     if (!user) {
       return res.status(404).json({
@@ -214,7 +262,22 @@ const recoverPassword = async (req, res, next) => {
       });
     }
 
-    if (String(user.forgotPasswordCode).trim() !== String(code).trim()) {
+    // Check if code has expired
+    if (
+      user.forgotPasswordCodeExpiresAt &&
+      new Date() > new Date(user.forgotPasswordCodeExpiresAt)
+    ) {
+      return res.status(400).json({
+        code: 400,
+        status: false,
+        message: "Password reset code has expired",
+      });
+    }
+
+    if (
+      !user.forgotPasswordCode ||
+      String(user.forgotPasswordCode).trim() !== String(code).trim()
+    ) {
       return res.status(400).json({
         code: 400,
         status: false,
@@ -225,6 +288,7 @@ const recoverPassword = async (req, res, next) => {
     const hashedPassword = await hashPassword(password);
     user.password = hashedPassword;
     user.forgotPasswordCode = null;
+    user.forgotPasswordCodeExpiresAt = null;
 
     await user.save();
     res.status(200).json({
@@ -300,7 +364,9 @@ const updateProfile = async (req, res, next) => {
     }
 
     if (email) {
-      const isEmailExist = await User.findOne({ email });
+      // Normalize email
+      const normalizedEmail = email.trim().toLowerCase();
+      const isEmailExist = await User.findOne({ email: normalizedEmail });
       if (isEmailExist && !user._id.equals(isEmailExist._id)) {
         return res.status(400).json({
           code: 400,
@@ -308,9 +374,19 @@ const updateProfile = async (req, res, next) => {
           message: "Email already exist!",
         });
       }
+      user.email = normalizedEmail;
     }
 
     if (profilePic) {
+      // Validate ObjectId format
+      const mongoose = require("mongoose");
+      if (!mongoose.Types.ObjectId.isValid(profilePic)) {
+        return res.status(400).json({
+          code: 400,
+          status: false,
+          message: "Invalid profile picture ID format",
+        });
+      }
       const file = await File.findById(profilePic);
       if (!file) {
         return res.status(404).json({
@@ -322,8 +398,7 @@ const updateProfile = async (req, res, next) => {
       user.profilePic = profilePic;
     }
 
-    user.name = name ? name : user.name;
-    user.email = email ? email : user.email;
+    user.name = name ? name.trim() : user.name;
 
     if (email) {
       user.isVerified = false;
@@ -349,7 +424,7 @@ const currentUser = async (req, res, next) => {
       .select("-password -verificationCode -forgotPasswordCode")
       .populate("profilePic");
     if (!user) {
-      res.status(404).json({
+      return res.status(404).json({
         code: 404,
         status: false,
         message: "user not found!",

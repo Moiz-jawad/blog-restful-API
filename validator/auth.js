@@ -7,11 +7,16 @@ const signupValidator = [
   check("email")
     .isEmail()
     .withMessage("invalid email")
+    .normalizeEmail()
     .notEmpty()
     .withMessage("email is required"),
   check("password")
-    .isLength({ min: 6 })
-    .withMessage("password must be 6 char long")
+    .isLength({ min: 8 })
+    .withMessage("password must be at least 8 characters long")
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+    .withMessage(
+      "password must contain at least one uppercase letter, one lowercase letter, and one number"
+    )
     .notEmpty()
     .withMessage("password is required"),
 ];
@@ -20,6 +25,7 @@ const loginValidator = [
   check("email")
     .isEmail()
     .withMessage("invalid email")
+    .normalizeEmail()
     .notEmpty()
     .withMessage("email is required"),
   check("password").notEmpty().withMessage("password is required"),
@@ -29,6 +35,7 @@ const emailValidator = [
   check("email")
     .isEmail()
     .withMessage("invalid email")
+    .normalizeEmail()
     .notEmpty()
     .withMessage("email required"),
 ];
@@ -37,6 +44,7 @@ const userVerfiyValidator = [
   check("email")
     .isEmail()
     .withMessage("invalid email")
+    .normalizeEmail()
     .notEmpty()
     .withMessage("email required"),
   check("code").notEmpty().withMessage("code is required"),
@@ -46,30 +54,40 @@ const recoverPasswordValidator = [
   check("email")
     .isEmail()
     .withMessage("invalid email")
+    .normalizeEmail()
     .notEmpty()
     .withMessage("email is required"),
   check("code").notEmpty().withMessage("code is required"),
   check("password")
-    .isLength({ min: 6 })
-    .withMessage("password must be 6 char long")
+    .isLength({ min: 8 })
+    .withMessage("password must be at least 8 characters long")
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+    .withMessage(
+      "password must contain at least one uppercase letter, one lowercase letter, and one number"
+    )
     .notEmpty()
     .withMessage("password is required"),
 ];
 
 const changePasswordValidator = [
   check("oldPassword").notEmpty().withMessage("old password is required"),
-  check("newPassword").notEmpty().withMessage("new password is required"),
+  check("newPassword")
+    .isLength({ min: 8 })
+    .withMessage("new password must be at least 8 characters long")
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+    .withMessage(
+      "new password must contain at least one uppercase letter, one lowercase letter, and one number"
+    )
+    .notEmpty()
+    .withMessage("new password is required"),
 ];
 
 const updateProfileValidator = [
   check("email")
     .optional()
-    .custom(async (email) => {
-      if (!validateEmail(email)) {
-        throw new Error("Invalid email format");
-      }
-      return true;
-    }),
+    .isEmail()
+    .withMessage("Invalid email format")
+    .normalizeEmail(),
   check("profilePic")
     .optional()
     .custom(async (profilePic) => {

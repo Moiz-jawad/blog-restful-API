@@ -1,4 +1,5 @@
 const { File, Category, Post } = require("../models");
+const mongoose = require("mongoose");
 
 const addPost = async (req, res, next) => {
   try {
@@ -38,7 +39,7 @@ const addPost = async (req, res, next) => {
     await newPost.save();
 
     res.status(201).json({
-      codes: 201,
+      code: 201,
       status: true,
       message: "post added successfully",
     });
@@ -53,7 +54,24 @@ const updatePost = async (req, res, next) => {
     const { id } = req.params;
     const { _id } = req.user;
 
+    // Validate ObjectId format
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        code: 400,
+        status: false,
+        message: "Invalid post ID format",
+      });
+    }
+
     if (file) {
+      // Validate ObjectId format
+      if (!mongoose.Types.ObjectId.isValid(file)) {
+        return res.status(400).json({
+          code: 400,
+          status: false,
+          message: "Invalid file ID format",
+        });
+      }
       const isFileExist = await File.findById(file);
       if (!isFileExist) {
         return res.status(404).json({
@@ -65,6 +83,14 @@ const updatePost = async (req, res, next) => {
     }
 
     if (category) {
+      // Validate ObjectId format
+      if (!mongoose.Types.ObjectId.isValid(category)) {
+        return res.status(400).json({
+          code: 400,
+          status: false,
+          message: "Invalid category ID format",
+        });
+      }
       const isCategoryExist = await Category.findById(category);
       if (!isCategoryExist) {
         return res.status(404).json({
@@ -93,7 +119,7 @@ const updatePost = async (req, res, next) => {
     await post.save();
 
     res.status(200).json({
-      codes: 200,
+      code: 200,
       status: true,
       message: "post update successfully",
       data: { post },
@@ -106,6 +132,16 @@ const updatePost = async (req, res, next) => {
 const deletePost = async (req, res, next) => {
   try {
     const { id } = req.params;
+
+    // Validate ObjectId format
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        code: 400,
+        status: false,
+        message: "Invalid post ID format",
+      });
+    }
+
     const post = await Post.findById(id);
     if (!post) {
       return res.status(404).json({
@@ -135,16 +171,24 @@ const getPostList = async (req, res, next) => {
 
     let query = {};
 
-    if (q) {
-      const search = new RegExp(q, "i");
+    if (q && typeof q === "string" && q.trim()) {
+      // Sanitize search query to prevent NoSQL injection
+      const sanitizedQuery = q.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const search = new RegExp(sanitizedQuery, "i");
       query = { $or: [{ title: search }, { desc: search }] };
     }
 
     if (category) {
+      // Validate ObjectId format to prevent injection
+      if (!mongoose.Types.ObjectId.isValid(category)) {
+        return res.status(400).json({
+          code: 400,
+          status: false,
+          message: "Invalid category ID format",
+        });
+      }
       query = { ...query, category };
     }
-
-    console.log(query);
 
     const total = await Post.countDocuments(query);
     const pages = Math.ceil(total / sizeNumber);
@@ -171,6 +215,16 @@ const getPostList = async (req, res, next) => {
 const getPost = async (req, res, next) => {
   try {
     const { id } = req.params;
+
+    // Validate ObjectId format
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        code: 400,
+        status: false,
+        message: "Invalid post ID format",
+      });
+    }
+
     const post = await Post.findById(id)
       .populate("file")
       .populate("category")
